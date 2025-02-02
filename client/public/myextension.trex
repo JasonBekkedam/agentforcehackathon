@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Extension id="react-extension-poc" version="1.0" name="React Extension POC">
+  <Server>
+    <Scripts>
+      <!-- Tableau will load your hosted React app here -->
+      <Script>https://YOUR_HEROKU_APP_DOMAIN/</Script>
+    </Scripts>
+    <Url>https://YOUR_HEROKU_APP_DOMAIN/</Url>
+  </Server>
+  <Description>This extension updates filters based on an external REST API.</Description>
+</Extension>

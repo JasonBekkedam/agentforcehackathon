@@ -1,0 +1,13 @@
+{
+	"name": "tableau-react-extension",
+	"version": "1.0.0",
+	"scripts": {
+		"start": "node server.js",
+		"client": "cd client && npm start",
+		"build": "cd client && npm run build",
+		"heroku-postbuild": "npm run build"
+	},
+	"dependencies": {
+		"express": "^4.21.2"
+	}
+}
