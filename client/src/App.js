@@ -6,10 +6,11 @@ function App() {
 	const [parameters, setParameters] = useState([]);
 	const [highlights, setHighlights] = useState([]);
 
-	// Get a worksheet asynchronously by name
+	// Helper to get a worksheet by name synchronously using the worksheets property
 	const getWorksheet = useCallback(async (worksheetName) => {
 		const dashboard = window.tableau.extensions.dashboardContent.dashboard;
-		const worksheets = await dashboard.getWorksheetsAsync();
+		// Use the synchronous property "worksheets" instead of getWorksheetsAsync()
+		const worksheets = dashboard.worksheets;
 		return worksheets.find((ws) => ws.name === worksheetName);
 	}, []);
 
@@ -19,7 +20,6 @@ function App() {
 			try {
 				const dashboard =
 					window.tableau.extensions.dashboardContent.dashboard;
-				// You can also use getWorksheet() here if needed.
 				const worksheet = dashboard.worksheets.find(
 					(ws) => ws.name === worksheetName
 				);
