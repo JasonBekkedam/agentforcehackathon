@@ -2,12 +2,11 @@ const express = require("express");
 const path = require("path");
 const app = express();
 
-// Middleware for JSON body parsing
+// Middleware for JSON body parsing (for POST requests)
 app.use(express.json());
 
 // ===== In-Memory Filter Storage for Proof-of-Concept =====
-// Instead of a single filter, we now store an array of filters.
-// You can pre-populate with multiple filters if desired.
+// Always store filters as an array.
 let filters = [
 	{
 		worksheetName: "Sheet 1",
@@ -21,15 +20,24 @@ let filters = [
 	},
 ];
 
-// GET /filters => returns the current filter criteria (an array of filter objects)
+// GET /filters => returns an array of filter objects
 app.get("/filters", (req, res) => {
 	res.json(filters);
 });
 
-// POST /filters => updates the current filter criteria
-// Expect the client to send an array of filter objects.
+// POST /filters => expects an array of filter objects and updates the filters
 app.post("/filters", (req, res) => {
-	filters = req.body; // e.g. [ { worksheetName, filterField, filterValues }, ... ]
+	// Option A: Enforce that the request body is an array (return an error if not)
+	/*
+	if (!Array.isArray(req.body)) {
+		return res.status(400).json({ error: "Request body must be an array of filters." });
+	}
+	*/
+
+	// Option B: If the request body is not an array, wrap it in an array.
+	// Uncomment the following line if you want to accept a single filter object.
+	filters = Array.isArray(req.body) ? req.body : [req.body];
+
 	res.json({ status: "updated", newFilters: filters });
 });
 
