@@ -7,7 +7,7 @@ app.use(express.json());
 
 // ===== In-Memory Storage for Proof-of-Concept =====
 
-// Always store filters, parameters, and highlights as arrays.
+// Store filters as an array of objects
 let filters = [
 	{
 		worksheetName: "Sheet 1",
@@ -21,6 +21,7 @@ let filters = [
 	},
 ];
 
+// Store parameters as an array of objects
 let parameters = [
 	{
 		parameterName: "Param1",
@@ -32,6 +33,7 @@ let parameters = [
 	},
 ];
 
+// Store highlights as an array of objects
 let highlights = [
 	{
 		worksheetName: "Sheet 1",

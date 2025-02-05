@@ -46,6 +46,7 @@ function App() {
 	}
 
 	// Helper function to highlight marks in Tableau
+	// We use the selectMarksAsync method to "highlight" marks
 	async function applyHighlight(worksheetName, fieldName, values) {
 		try {
 			const dashboard =
@@ -54,9 +55,7 @@ function App() {
 				(ws) => ws.name === worksheetName
 			);
 			if (worksheet) {
-				// This method highlights marks based on the field and values.
-				// Adjust the parameters if your Tableau API version differs.
-				await worksheet.highlightMarksAsync(
+				await worksheet.selectMarksAsync(
 					fieldName,
 					values,
 					window.tableau.SelectionUpdateType.Replace
@@ -91,7 +90,7 @@ function App() {
 					const response = await fetch("/updates");
 					if (response.ok) {
 						const data = await response.json();
-						// Ensure that the received values are arrays
+						// Ensure the received data are arrays
 						const newFilters = Array.isArray(data.filters)
 							? data.filters
 							: [];
