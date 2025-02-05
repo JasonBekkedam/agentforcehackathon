@@ -2,64 +2,53 @@ const express = require("express");
 const path = require("path");
 const app = express();
 
-// Middleware for JSON body parsing (for POST requests)
+// Middleware for JSON body parsing
 app.use(express.json());
 
 // ===== In-Memory Storage for Proof-of-Concept =====
 
-// Store filters as an array of objects
-let filters = [
+// Default state for filters and parameters
+const defaultFilters = [
 	{
 		worksheetName: "Sheet 1",
 		filterField: "Category",
-		filterValues: ["Furniture"],
+		filterValues: [],
 	},
 	{
 		worksheetName: "Sheet 1",
 		filterField: "Region",
-		filterValues: ["East"],
+		filterValues: [],
 	},
 ];
 
-// Store parameters as an array of objects
-let parameters = [
+const defaultParameters = [
 	{
 		parameterName: "Param1",
-		parameterValue: "Value1",
+		parameterValue: "",
 	},
 	{
 		parameterName: "Param2",
-		parameterValue: "Value2",
+		parameterValue: "",
 	},
 ];
 
-// Store highlights as an array of objects
-let highlights = [
-	{
-		worksheetName: "Sheet 1",
-		highlightField: "Sub-Category",
-		highlightValues: ["Bookcases"],
-	},
-];
+// In-memory storage – start with some defaults.
+let filters = JSON.parse(JSON.stringify(defaultFilters));
+let parameters = JSON.parse(JSON.stringify(defaultParameters));
 
-// GET /updates => returns filters, parameters, and highlights
+// GET /updates => returns filters and parameters
 app.get("/updates", (req, res) => {
-	res.json({ filters, parameters, highlights });
+	res.json({ filters, parameters });
 });
 
-// POST /updates => updates filters, parameters, and/or highlights
-// Expects an object like:
+// POST /updates => updates filters and/or parameters
+// Expected JSON format:
 // {
-//   filters: [ { worksheetName, filterField, filterValues }, ... ],
-//   parameters: [ { parameterName, parameterValue }, ... ],
-//   highlights: [ { worksheetName, highlightField, highlightValues }, ... ]
+//   "filters": [ { worksheetName, filterField, filterValues }, ... ],
+//   "parameters": [ { parameterName, parameterValue }, ... ]
 // }
 app.post("/updates", (req, res) => {
-	const {
-		filters: newFilters,
-		parameters: newParameters,
-		highlights: newHighlights,
-	} = req.body;
+	const { filters: newFilters, parameters: newParameters } = req.body;
 
 	if (newFilters) {
 		filters = Array.isArray(newFilters) ? newFilters : [newFilters];
@@ -69,13 +58,15 @@ app.post("/updates", (req, res) => {
 			? newParameters
 			: [newParameters];
 	}
-	if (newHighlights) {
-		highlights = Array.isArray(newHighlights)
-			? newHighlights
-			: [newHighlights];
-	}
 
-	res.json({ status: "updated", filters, parameters, highlights });
+	res.json({ status: "updated", filters, parameters });
+});
+
+// POST /reset => resets filters and parameters to their default values
+app.post("/reset", (req, res) => {
+	filters = JSON.parse(JSON.stringify(defaultFilters));
+	parameters = JSON.parse(JSON.stringify(defaultParameters));
+	res.json({ status: "reset", filters, parameters });
 });
 
 // ===== Serve React Build =====
