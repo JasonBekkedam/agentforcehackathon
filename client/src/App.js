@@ -4,6 +4,7 @@ function App() {
 	const [initialized, setInitialized] = useState(false);
 	const [filters, setFilters] = useState([]);
 	const [parameters, setParameters] = useState([]);
+	const [highlights, setHighlights] = useState([]);
 
 	// Helper function to apply a filter in Tableau
 	async function applyFilter(worksheetName, fieldName, values) {
@@ -26,15 +27,12 @@ function App() {
 	}
 
 	// Helper function to update a parameter in Tableau
-	// Helper function to update a parameter in Tableau
 	async function applyParameter(parameterName, parameterValue) {
 		try {
 			const dashboard =
 				window.tableau.extensions.dashboardContent.dashboard;
-			// Retrieve the parameter object by name
 			const parameter = await dashboard.findParameterAsync(parameterName);
 			if (parameter) {
-				// Update the parameter value
 				await parameter.changeValueAsync(parameterValue);
 				console.log(
 					`Parameter ${parameterName} updated to ${parameterValue}`
@@ -44,6 +42,31 @@ function App() {
 			}
 		} catch (err) {
 			console.error(`Error updating parameter ${parameterName}:`, err);
+		}
+	}
+
+	// Helper function to highlight marks in Tableau
+	async function applyHighlight(worksheetName, fieldName, values) {
+		try {
+			const dashboard =
+				window.tableau.extensions.dashboardContent.dashboard;
+			const worksheet = dashboard.worksheets.find(
+				(ws) => ws.name === worksheetName
+			);
+			if (worksheet) {
+				// This method highlights marks based on the field and values.
+				// Adjust the parameters if your Tableau API version differs.
+				await worksheet.highlightMarksAsync(
+					fieldName,
+					values,
+					window.tableau.SelectionUpdateType.Replace
+				);
+				console.log(
+					`Highlight applied on ${worksheetName} for ${fieldName}: ${values}`
+				);
+			}
+		} catch (err) {
+			console.error("Error applying highlight:", err);
 		}
 	}
 
@@ -60,7 +83,7 @@ function App() {
 			});
 	}, []);
 
-	// Poll the server for updates (both filters and parameters)
+	// Poll the server for updates (filters, parameters, and highlights)
 	useEffect(() => {
 		if (initialized) {
 			const interval = setInterval(async () => {
@@ -68,18 +91,22 @@ function App() {
 					const response = await fetch("/updates");
 					if (response.ok) {
 						const data = await response.json();
-						// Destructure updates from the server response.
+						// Ensure that the received values are arrays
 						const newFilters = Array.isArray(data.filters)
 							? data.filters
 							: [];
 						const newParameters = Array.isArray(data.parameters)
 							? data.parameters
 							: [];
+						const newHighlights = Array.isArray(data.highlights)
+							? data.highlights
+							: [];
 
 						setFilters(newFilters);
 						setParameters(newParameters);
+						setHighlights(newHighlights);
 
-						// Apply all filters concurrently
+						// Apply filters concurrently
 						await Promise.all(
 							newFilters.map((filter) =>
 								applyFilter(
@@ -90,12 +117,23 @@ function App() {
 							)
 						);
 
-						// Apply all parameters concurrently
+						// Apply parameters concurrently
 						await Promise.all(
 							newParameters.map((param) =>
 								applyParameter(
 									param.parameterName,
 									param.parameterValue
+								)
+							)
+						);
+
+						// Apply highlights concurrently
+						await Promise.all(
+							newHighlights.map((highlight) =>
+								applyHighlight(
+									highlight.worksheetName,
+									highlight.highlightField,
+									highlight.highlightValues
 								)
 							)
 						);
@@ -114,7 +152,6 @@ function App() {
 			<h2>Tableau React Extension Proof of Concept</h2>
 			{initialized ? (
 				<div>
-					<p>Extension is initialized.</p>
 					<div>
 						<h3>Filters:</h3>
 						<ul>
@@ -134,6 +171,18 @@ function App() {
 								<li key={index}>
 									<strong>{param.parameterName}</strong>:{" "}
 									{JSON.stringify(param.parameterValue)}
+								</li>
+							))}
+						</ul>
+					</div>
+					<div>
+						<h3>Highlights:</h3>
+						<ul>
+							{highlights.map((highlight, index) => (
+								<li key={index}>
+									<strong>{highlight.worksheetName}</strong> -{" "}
+									{highlight.highlightField}:{" "}
+									{JSON.stringify(highlight.highlightValues)}
 								</li>
 							))}
 						</ul>

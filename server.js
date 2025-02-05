@@ -2,12 +2,12 @@ const express = require("express");
 const path = require("path");
 const app = express();
 
-// Middleware for JSON body parsing
+// Middleware for JSON body parsing (for POST requests)
 app.use(express.json());
 
 // ===== In-Memory Storage for Proof-of-Concept =====
 
-// Store filters as an array of objects
+// Always store filters, parameters, and highlights as arrays.
 let filters = [
 	{
 		worksheetName: "Sheet 1",
@@ -21,7 +21,6 @@ let filters = [
 	},
 ];
 
-// Store parameters as an array of objects
 let parameters = [
 	{
 		parameterName: "Param1",
@@ -33,30 +32,48 @@ let parameters = [
 	},
 ];
 
-// GET /updates => returns both filters and parameters
+let highlights = [
+	{
+		worksheetName: "Sheet 1",
+		highlightField: "Sub-Category",
+		highlightValues: ["Bookcases"],
+	},
+];
+
+// GET /updates => returns filters, parameters, and highlights
 app.get("/updates", (req, res) => {
-	res.json({ filters, parameters });
+	res.json({ filters, parameters, highlights });
 });
 
-// POST /updates => updates filters and/or parameters
-// Expect the client to send an object like:
-// { filters: [ ... ], parameters: [ ... ] }
+// POST /updates => updates filters, parameters, and/or highlights
+// Expects an object like:
+// {
+//   filters: [ { worksheetName, filterField, filterValues }, ... ],
+//   parameters: [ { parameterName, parameterValue }, ... ],
+//   highlights: [ { worksheetName, highlightField, highlightValues }, ... ]
+// }
 app.post("/updates", (req, res) => {
-	const { filters: newFilters, parameters: newParameters } = req.body;
+	const {
+		filters: newFilters,
+		parameters: newParameters,
+		highlights: newHighlights,
+	} = req.body;
 
 	if (newFilters) {
-		// Ensure we always store an array
 		filters = Array.isArray(newFilters) ? newFilters : [newFilters];
 	}
-
 	if (newParameters) {
-		// Ensure we always store an array
 		parameters = Array.isArray(newParameters)
 			? newParameters
 			: [newParameters];
 	}
+	if (newHighlights) {
+		highlights = Array.isArray(newHighlights)
+			? newHighlights
+			: [newHighlights];
+	}
 
-	res.json({ status: "updated", filters, parameters });
+	res.json({ status: "updated", filters, parameters, highlights });
 });
 
 // ===== Serve React Build =====
