@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 function App() {
 	const [initialized, setInitialized] = useState(false);
-	const [filters, setFilters] = useState([]); // now stores an array of filter objects
+	const [filterInfo, setFilterInfo] = useState(null);
 
-	// Helper function to apply a filter in Tableau
+	// Helper function to apply the filter in Tableau
 	async function applyFilter(worksheetName, fieldName, values) {
 		try {
 			const dashboard =
@@ -25,7 +25,7 @@ function App() {
 	}
 
 	useEffect(() => {
-		// Initialize the Tableau extension
+		// Initialize the extension once the DOM is loaded
 		window.tableau.extensions
 			.initializeAsync()
 			.then(() => {
@@ -37,30 +37,26 @@ function App() {
 			});
 	}, []);
 
-	// Poll the server for filter updates
+	// Poll the server for filter updates, for demonstration
 	useEffect(() => {
 		if (initialized) {
 			const interval = setInterval(async () => {
 				try {
 					const response = await fetch("/filters");
 					if (response.ok) {
-						const data = await response.json(); // expecting an array of filter objects
-						setFilters(data);
-						// Apply all filters concurrently:
-						await Promise.all(
-							data.map((filter) =>
-								applyFilter(
-									filter.worksheetName,
-									filter.filterField,
-									filter.filterValues
-								)
-							)
+						const data = await response.json();
+						setFilterInfo(data);
+						// Apply the filter using the Extension API
+						await applyFilter(
+							data.worksheetName,
+							data.filterField,
+							data.filterValues
 						);
 					}
 				} catch (error) {
 					console.error("Error fetching filters:", error);
 				}
-			}, 5000); // Poll every 5 seconds
+			}, 5000); // check every 5 seconds
 
 			return () => clearInterval(interval);
 		}
@@ -70,18 +66,10 @@ function App() {
 		<div style={{ padding: 20 }}>
 			<h2>Tableau React Extension Proof of Concept</h2>
 			{initialized ? (
-				<div>
-					<p>Extension is initialized. Current filters:</p>
-					<ul>
-						{filters.map((filter, index) => (
-							<li key={index}>
-								<strong>{filter.worksheetName}</strong> -{" "}
-								{filter.filterField}:{" "}
-								{JSON.stringify(filter.filterValues)}
-							</li>
-						))}
-					</ul>
-				</div>
+				<p>
+					Extension is initialized. Current filter:{" "}
+					{JSON.stringify(filterInfo)}
+				</p>
 			) : (
 				<p>Initializing extension...</p>
 			)}

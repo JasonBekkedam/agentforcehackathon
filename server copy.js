@@ -2,35 +2,27 @@ const express = require("express");
 const path = require("path");
 const app = express();
 
-// Middleware for JSON body parsing
+// Middleware for JSON body parsing (for POST requests)
 app.use(express.json());
 
 // ===== In-Memory Filter Storage for Proof-of-Concept =====
-// Instead of a single filter, we now store an array of filters.
-// You can pre-populate with multiple filters if desired.
-let filters = [
-	{
-		worksheetName: "Sheet 1",
-		filterField: "Category",
-		filterValues: ["Furniture"],
-	},
-	{
-		worksheetName: "Sheet 1",
-		filterField: "Region",
-		filterValues: ["East"],
-	},
-];
+let currentFilter = {
+	worksheetName: "Sheet 1",
+	filterField: "Category",
+	filterValues: ["Furniture"],
+};
 
-// GET /filters => returns the current filter criteria (an array of filter objects)
+// ===== Simple REST endpoints =====
+
+// GET /filters => returns the current filter criteria
 app.get("/filters", (req, res) => {
-	res.json(filters);
+	res.json(currentFilter);
 });
 
 // POST /filters => updates the current filter criteria
-// Expect the client to send an array of filter objects.
 app.post("/filters", (req, res) => {
-	filters = req.body; // e.g. [ { worksheetName, filterField, filterValues }, ... ]
-	res.json({ status: "updated", newFilters: filters });
+	currentFilter = req.body; // e.g. { worksheetName, filterField, filterValues }
+	res.json({ status: "updated", newFilter: currentFilter });
 });
 
 // ===== Serve React build =====
