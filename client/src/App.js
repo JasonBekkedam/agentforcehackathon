@@ -45,8 +45,7 @@ function App() {
 		}
 	}
 
-	// Helper function to highlight marks in Tableau
-	// We use the selectMarksAsync method to "highlight" marks
+	// Helper function to "highlight" marks in Tableau using selectMarksAsync
 	async function applyHighlight(worksheetName, fieldName, values) {
 		try {
 			const dashboard =
@@ -55,14 +54,20 @@ function App() {
 				(ws) => ws.name === worksheetName
 			);
 			if (worksheet) {
-				await worksheet.selectMarksAsync(
-					fieldName,
-					values,
-					window.tableau.SelectionUpdateType.Replace
-				);
-				console.log(
-					`Highlight applied on ${worksheetName} for ${fieldName}: ${values}`
-				);
+				if (typeof worksheet.selectMarksAsync === "function") {
+					await worksheet.selectMarksAsync(
+						fieldName,
+						values,
+						window.tableau.SelectionUpdateType.Replace
+					);
+					console.log(
+						`Highlight applied on ${worksheetName} for ${fieldName}: ${values}`
+					);
+				} else {
+					console.error(
+						`selectMarksAsync is not available on worksheet "${worksheetName}". Please ensure your Tableau version supports this function.`
+					);
+				}
 			}
 		} catch (err) {
 			console.error("Error applying highlight:", err);
