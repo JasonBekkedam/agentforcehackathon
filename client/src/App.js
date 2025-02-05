@@ -1,206 +1,83 @@
-import React, { useState, useEffect, useCallback } from "react";
+const express = require("express");
+const path = require("path");
+const app = express();
 
-function App() {
-	const [initialized, setInitialized] = useState(false);
-	const [filters, setFilters] = useState([]);
-	const [parameters, setParameters] = useState([]);
+// Middleware for JSON body parsing
+app.use(express.json());
 
-	// Helper function to apply a filter using the Tableau Extensions API
-	const applyFilter = useCallback(
-		async (worksheetName, fieldName, values) => {
-			try {
-				const dashboard =
-					window.tableau.extensions.dashboardContent.dashboard;
-				const worksheet = dashboard.worksheets.find(
-					(ws) => ws.name === worksheetName
-				);
-				if (worksheet) {
-					await worksheet.applyFilterAsync(
-						fieldName,
-						values,
-						window.tableau.FilterUpdateType.Replace
-					);
-					console.log(
-						`Filter applied on ${worksheetName} for ${fieldName}: ${values}`
-					);
-				} else {
-					console.error(
-						`Worksheet ${worksheetName} not found for filtering.`
-					);
-				}
-			} catch (err) {
-				console.error("Error applying filter:", err);
-			}
-		},
-		[]
-	);
+// ===== In-Memory Storage for Proof-of-Concept =====
 
-	// Helper function to update a parameter using the Tableau Extensions API
-	const applyParameter = useCallback(
-		async (parameterName, parameterValue) => {
-			try {
-				const dashboard =
-					window.tableau.extensions.dashboardContent.dashboard;
-				const parameter = await dashboard.findParameterAsync(
-					parameterName
-				);
-				if (parameter) {
-					await parameter.changeValueAsync(parameterValue);
-					console.log(
-						`Parameter ${parameterName} updated to ${parameterValue}`
-					);
-				} else {
-					console.error(`Parameter ${parameterName} not found.`);
-				}
-			} catch (err) {
-				console.error(
-					`Error updating parameter ${parameterName}:`,
-					err
-				);
-			}
-		},
-		[]
-	);
+// Set the default state for filters and parameters
+const defaultFilters = [
+	{
+		worksheetName: "Sheet 1",
+		filterField: "Category",
+		filterValues: ["Furniture", "Office Supplies", "Technology"],
+	},
+	{
+		worksheetName: "Sheet 1",
+		filterField: "Region",
+		filterValues: ["Central", "East", "South", "West"],
+	},
+];
 
-	// Initialize the Tableau extension
-	useEffect(() => {
-		window.tableau.extensions
-			.initializeAsync()
-			.then(() => {
-				console.log("Tableau Extension initialized.");
-				setInitialized(true);
-			})
-			.catch((err) => {
-				console.error("Error initializing extension:", err);
-			});
-	}, []);
+const defaultParameters = [
+	{
+		parameterName: "Param1",
+		parameterValue: "default",
+	},
+	{
+		parameterName: "Param2",
+		parameterValue: "default",
+	},
+];
 
-	// Poll the server for updates (filters and parameters)
-	useEffect(() => {
-		if (initialized) {
-			const interval = setInterval(async () => {
-				try {
-					const response = await fetch("/updates");
-					if (response.ok) {
-						const data = await response.json();
-						const newFilters = Array.isArray(data.filters)
-							? data.filters
-							: [];
-						const newParameters = Array.isArray(data.parameters)
-							? data.parameters
-							: [];
+// In-memory storage – initialize with the default values.
+let filters = JSON.parse(JSON.stringify(defaultFilters));
+let parameters = JSON.parse(JSON.stringify(defaultParameters));
 
-						setFilters(newFilters);
-						setParameters(newParameters);
+// GET /updates => returns filters and parameters
+app.get("/updates", (req, res) => {
+	res.json({ filters, parameters });
+});
 
-						// Apply filters concurrently
-						await Promise.all(
-							newFilters.map((filter) =>
-								applyFilter(
-									filter.worksheetName,
-									filter.filterField,
-									filter.filterValues
-								)
-							)
-						);
+// POST /updates => updates filters and/or parameters
+// Expected JSON format:
+// {
+//   "filters": [ { worksheetName, filterField, filterValues }, ... ],
+//   "parameters": [ { parameterName, parameterValue }, ... ]
+// }
+app.post("/updates", (req, res) => {
+	const { filters: newFilters, parameters: newParameters } = req.body;
 
-						// Apply parameters concurrently
-						await Promise.all(
-							newParameters.map((param) =>
-								applyParameter(
-									param.parameterName,
-									param.parameterValue
-								)
-							)
-						);
-					}
-				} catch (error) {
-					console.error("Error fetching updates:", error);
-				}
-			}, 5000); // Poll every 5 seconds
+	if (newFilters) {
+		filters = Array.isArray(newFilters) ? newFilters : [newFilters];
+	}
+	if (newParameters) {
+		parameters = Array.isArray(newParameters)
+			? newParameters
+			: [newParameters];
+	}
 
-			return () => clearInterval(interval);
-		}
-	}, [initialized, applyFilter, applyParameter]);
+	res.json({ status: "updated", filters, parameters });
+});
 
-	// Function to reset filters by calling the /reset endpoint
-	const resetFilters = async () => {
-		try {
-			const response = await fetch("/reset", { method: "POST" });
-			if (response.ok) {
-				const data = await response.json();
-				console.log("Reset response:", data);
-				// Update state with reset filters and parameters
-				setFilters(data.filters);
-				setParameters(data.parameters);
-				// Optionally, immediately apply the reset settings to Tableau:
-				await Promise.all(
-					data.filters.map((filter) =>
-						applyFilter(
-							filter.worksheetName,
-							filter.filterField,
-							filter.filterValues
-						)
-					)
-				);
-				await Promise.all(
-					data.parameters.map((param) =>
-						applyParameter(
-							param.parameterName,
-							param.parameterValue
-						)
-					)
-				);
-			} else {
-				console.error(
-					"Error resetting filters. Status:",
-					response.status
-				);
-			}
-		} catch (error) {
-			console.error("Error resetting filters:", error);
-		}
-	};
+// POST /reset => resets filters and parameters to their default values
+app.post("/reset", (req, res) => {
+	filters = JSON.parse(JSON.stringify(defaultFilters));
+	parameters = JSON.parse(JSON.stringify(defaultParameters));
+	res.json({ status: "reset", filters, parameters });
+});
 
-	return (
-		<div style={{ padding: 20 }}>
-			<h2>Tableau React Extension Proof of Concept</h2>
-			{initialized ? (
-				<div>
-					<div>
-						<h3>Filters:</h3>
-						<ul>
-							{filters.map((filter, index) => (
-								<li key={index}>
-									<strong>{filter.worksheetName}</strong> -{" "}
-									{filter.filterField}:{" "}
-									{JSON.stringify(filter.filterValues)}
-								</li>
-							))}
-						</ul>
-					</div>
-					<div>
-						<h3>Parameters:</h3>
-						<ul>
-							{parameters.map((param, index) => (
-								<li key={index}>
-									<strong>{param.parameterName}</strong>:{" "}
-									{JSON.stringify(param.parameterValue)}
-								</li>
-							))}
-						</ul>
-					</div>
-					<div style={{ marginTop: 20 }}>
-						<button onClick={resetFilters}>
-							Reset All Filters
-						</button>
-					</div>
-				</div>
-			) : (
-				<p>Initializing extension...</p>
-			)}
-		</div>
-	);
-}
+// ===== Serve React Build =====
+app.use(express.static(path.join(__dirname, "client", "build")));
 
-export default App;
+app.get("*", (req, res) => {
+	res.sendFile(path.join(__dirname, "client", "build", "index.html"));
+});
+
+// ===== Start the Server =====
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+	console.log(`Server listening on port ${PORT}`);
+});

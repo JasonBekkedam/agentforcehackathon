@@ -7,33 +7,32 @@ app.use(express.json());
 
 // ===== In-Memory Storage for Proof-of-Concept =====
 
-// Default state for filters and parameters
-// For filters, we now set the default filterValues to ["All"]
+// Set the default state for filters and parameters
 const defaultFilters = [
 	{
 		worksheetName: "Sheet 1",
 		filterField: "Category",
-		filterValues: ["All"],
+		filterValues: ["Furniture", "Office Supplies", "Technology"],
 	},
 	{
 		worksheetName: "Sheet 1",
 		filterField: "Region",
-		filterValues: ["All"],
+		filterValues: ["Central", "East", "South", "West"],
 	},
 ];
 
 const defaultParameters = [
 	{
 		parameterName: "Param1",
-		parameterValue: "",
+		parameterValue: "default",
 	},
 	{
 		parameterName: "Param2",
-		parameterValue: "",
+		parameterValue: "default",
 	},
 ];
 
-// In-memory storage – start with some defaults.
+// In-memory storage – initialize with the default values.
 let filters = JSON.parse(JSON.stringify(defaultFilters));
 let parameters = JSON.parse(JSON.stringify(defaultParameters));
 
