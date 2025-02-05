@@ -26,16 +26,22 @@ function App() {
 	}
 
 	// Helper function to update a parameter in Tableau
+	// Helper function to update a parameter in Tableau
 	async function applyParameter(parameterName, parameterValue) {
 		try {
 			const dashboard =
 				window.tableau.extensions.dashboardContent.dashboard;
-			// Update the parameter value asynchronously.
-			// (Verify that your Tableau version supports changeParameterValueAsync.)
-			await dashboard.changeParameterValueAsync(
-				parameterName,
-				parameterValue
-			);
+			// Retrieve the parameter object by name
+			const parameter = await dashboard.findParameterAsync(parameterName);
+			if (parameter) {
+				// Update the parameter value
+				await parameter.changeValueAsync(parameterValue);
+				console.log(
+					`Parameter ${parameterName} updated to ${parameterValue}`
+				);
+			} else {
+				console.error(`Parameter ${parameterName} not found.`);
+			}
 		} catch (err) {
 			console.error(`Error updating parameter ${parameterName}:`, err);
 		}
