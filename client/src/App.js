@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 function App() {
 	const [initialized, setInitialized] = useState(false);
@@ -6,73 +6,102 @@ function App() {
 	const [parameters, setParameters] = useState([]);
 	const [highlights, setHighlights] = useState([]);
 
-	// Helper function to apply a filter in Tableau
-	async function applyFilter(worksheetName, fieldName, values) {
-		try {
-			const dashboard =
-				window.tableau.extensions.dashboardContent.dashboard;
-			const worksheet = dashboard.worksheets.find(
-				(ws) => ws.name === worksheetName
-			);
-			if (worksheet) {
-				await worksheet.applyFilterAsync(
-					fieldName,
-					values,
-					window.tableau.FilterUpdateType.Replace
-				);
-			}
-		} catch (err) {
-			console.error("Error applying filter:", err);
-		}
-	}
+	// Get a worksheet asynchronously by name
+	const getWorksheet = useCallback(async (worksheetName) => {
+		const dashboard = window.tableau.extensions.dashboardContent.dashboard;
+		const worksheets = await dashboard.getWorksheetsAsync();
+		return worksheets.find((ws) => ws.name === worksheetName);
+	}, []);
 
-	// Helper function to update a parameter in Tableau
-	async function applyParameter(parameterName, parameterValue) {
-		try {
-			const dashboard =
-				window.tableau.extensions.dashboardContent.dashboard;
-			const parameter = await dashboard.findParameterAsync(parameterName);
-			if (parameter) {
-				await parameter.changeValueAsync(parameterValue);
-				console.log(
-					`Parameter ${parameterName} updated to ${parameterValue}`
+	// Apply a filter using the Tableau Extensions API
+	const applyFilter = useCallback(
+		async (worksheetName, fieldName, values) => {
+			try {
+				const dashboard =
+					window.tableau.extensions.dashboardContent.dashboard;
+				// You can also use getWorksheet() here if needed.
+				const worksheet = dashboard.worksheets.find(
+					(ws) => ws.name === worksheetName
 				);
-			} else {
-				console.error(`Parameter ${parameterName} not found.`);
-			}
-		} catch (err) {
-			console.error(`Error updating parameter ${parameterName}:`, err);
-		}
-	}
-
-	// Helper function to "highlight" marks in Tableau using selectMarksAsync
-	async function applyHighlight(worksheetName, fieldName, values) {
-		try {
-			const dashboard =
-				window.tableau.extensions.dashboardContent.dashboard;
-			const worksheet = dashboard.worksheets.find(
-				(ws) => ws.name === worksheetName
-			);
-			if (worksheet) {
-				if (typeof worksheet.selectMarksAsync === "function") {
-					await worksheet.selectMarksAsync(
+				if (worksheet) {
+					await worksheet.applyFilterAsync(
 						fieldName,
 						values,
-						window.tableau.SelectionUpdateType.Replace
+						window.tableau.FilterUpdateType.Replace
 					);
 					console.log(
-						`Highlight applied on ${worksheetName} for ${fieldName}: ${values}`
+						`Filter applied on ${worksheetName} for ${fieldName}: ${values}`
 					);
 				} else {
 					console.error(
-						`selectMarksAsync is not available on worksheet "${worksheetName}". Please ensure your Tableau version supports this function.`
+						`Worksheet ${worksheetName} not found for filtering.`
 					);
 				}
+			} catch (err) {
+				console.error("Error applying filter:", err);
 			}
-		} catch (err) {
-			console.error("Error applying highlight:", err);
-		}
-	}
+		},
+		[]
+	);
+
+	// Update a parameter using the Tableau Extensions API
+	const applyParameter = useCallback(
+		async (parameterName, parameterValue) => {
+			try {
+				const dashboard =
+					window.tableau.extensions.dashboardContent.dashboard;
+				const parameter = await dashboard.findParameterAsync(
+					parameterName
+				);
+				if (parameter) {
+					await parameter.changeValueAsync(parameterValue);
+					console.log(
+						`Parameter ${parameterName} updated to ${parameterValue}`
+					);
+				} else {
+					console.error(`Parameter ${parameterName} not found.`);
+				}
+			} catch (err) {
+				console.error(
+					`Error updating parameter ${parameterName}:`,
+					err
+				);
+			}
+		},
+		[]
+	);
+
+	// Highlight marks using selectMarksAsync per Tableau's recommendations
+	const applyHighlight = useCallback(
+		async (worksheetName, fieldName, values) => {
+			try {
+				const worksheet = await getWorksheet(worksheetName);
+				if (worksheet) {
+					if (typeof worksheet.selectMarksAsync === "function") {
+						await worksheet.selectMarksAsync(
+							fieldName,
+							values,
+							window.tableau.SelectionUpdateType.Replace
+						);
+						console.log(
+							`Highlight applied on ${worksheetName} for ${fieldName}: ${values}`
+						);
+					} else {
+						console.error(
+							`selectMarksAsync is not available on worksheet "${worksheetName}". Ensure that this worksheet supports mark selection and that your Tableau version is current.`
+						);
+					}
+				} else {
+					console.error(
+						`Worksheet ${worksheetName} not found for highlighting.`
+					);
+				}
+			} catch (err) {
+				console.error("Error applying highlight:", err);
+			}
+		},
+		[getWorksheet]
+	);
 
 	// Initialize the Tableau extension
 	useEffect(() => {
@@ -95,7 +124,6 @@ function App() {
 					const response = await fetch("/updates");
 					if (response.ok) {
 						const data = await response.json();
-						// Ensure the received data are arrays
 						const newFilters = Array.isArray(data.filters)
 							? data.filters
 							: [];
@@ -149,7 +177,7 @@ function App() {
 
 			return () => clearInterval(interval);
 		}
-	}, [initialized]);
+	}, [initialized, applyFilter, applyParameter, applyHighlight]);
 
 	return (
 		<div style={{ padding: 20 }}>
