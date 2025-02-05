@@ -2,11 +2,12 @@ const express = require("express");
 const path = require("path");
 const app = express();
 
-// Middleware for JSON body parsing (for POST requests)
+// Middleware for JSON body parsing
 app.use(express.json());
 
-// ===== In-Memory Filter Storage for Proof-of-Concept =====
-// Always store filters as an array.
+// ===== In-Memory Storage for Proof-of-Concept =====
+
+// Store filters as an array of objects
 let filters = [
 	{
 		worksheetName: "Sheet 1",
@@ -20,36 +21,52 @@ let filters = [
 	},
 ];
 
-// GET /filters => returns an array of filter objects
-app.get("/filters", (req, res) => {
-	res.json(filters);
+// Store parameters as an array of objects
+let parameters = [
+	{
+		parameterName: "Param1",
+		parameterValue: "Value1",
+	},
+	{
+		parameterName: "Param2",
+		parameterValue: "Value2",
+	},
+];
+
+// GET /updates => returns both filters and parameters
+app.get("/updates", (req, res) => {
+	res.json({ filters, parameters });
 });
 
-// POST /filters => expects an array of filter objects and updates the filters
-app.post("/filters", (req, res) => {
-	// Option A: Enforce that the request body is an array (return an error if not)
-	/*
-	if (!Array.isArray(req.body)) {
-		return res.status(400).json({ error: "Request body must be an array of filters." });
+// POST /updates => updates filters and/or parameters
+// Expect the client to send an object like:
+// { filters: [ ... ], parameters: [ ... ] }
+app.post("/updates", (req, res) => {
+	const { filters: newFilters, parameters: newParameters } = req.body;
+
+	if (newFilters) {
+		// Ensure we always store an array
+		filters = Array.isArray(newFilters) ? newFilters : [newFilters];
 	}
-	*/
 
-	// Option B: If the request body is not an array, wrap it in an array.
-	// Uncomment the following line if you want to accept a single filter object.
-	filters = Array.isArray(req.body) ? req.body : [req.body];
+	if (newParameters) {
+		// Ensure we always store an array
+		parameters = Array.isArray(newParameters)
+			? newParameters
+			: [newParameters];
+	}
 
-	res.json({ status: "updated", newFilters: filters });
+	res.json({ status: "updated", filters, parameters });
 });
 
-// ===== Serve React build =====
+// ===== Serve React Build =====
 app.use(express.static(path.join(__dirname, "client", "build")));
 
-// For any other route, serve index.html
 app.get("*", (req, res) => {
 	res.sendFile(path.join(__dirname, "client", "build", "index.html"));
 });
 
-// ===== Start the server =====
+// ===== Start the Server =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
 	console.log(`Server listening on port ${PORT}`);
