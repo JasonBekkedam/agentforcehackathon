@@ -24,7 +24,7 @@ const defaultFilters = [
 const defaultParameters = [
 	{
 		parameterName: "Param1",
-		parameterValue: "default",
+		parameterValue: "default2",
 	},
 	{
 		parameterName: "Param2",
