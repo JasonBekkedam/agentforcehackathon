@@ -2,6 +2,19 @@ const express = require("express");
 const path = require("path");
 const app = express();
 
+// Middleware for logging all requests
+app.use((req, res, next) => {
+	console.log("----- INCOMING REQUEST -----");
+	console.log(`Method: ${req.method}`);
+	console.log(`URL: ${req.url}`);
+	if (req.method === "POST" || req.method === "PUT") {
+		console.log("Body:");
+		console.log(JSON.stringify(req.body, null, 2)); // Pretty print JSON body
+	}
+	console.log("----------------------------");
+	next(); // Pass control to the next middleware/route handler
+});
+
 // Middleware for JSON body parsing
 app.use(express.json());
 
@@ -24,11 +37,11 @@ const defaultFilters = [
 const defaultParameters = [
 	{
 		parameterName: "Param1",
-		parameterValue: "default2",
+		parameterValue: "",
 	},
 	{
 		parameterName: "Param2",
-		parameterValue: "default",
+		parameterValue: "",
 	},
 ];
 
@@ -44,8 +57,8 @@ app.get("/updates", (req, res) => {
 // POST /updates => updates filters and/or parameters
 // Expected JSON format:
 // {
-//   "filters": [ { worksheetName, filterField, filterValues }, ... ],
-//   "parameters": [ { parameterName, parameterValue }, ... ]
+//  "filters": [ { worksheetName, filterField, filterValues }, ... ],
+//  "parameters": [ { parameterName, parameterValue }, ... ]
 // }
 app.post("/updates", (req, res) => {
 	const { filters: newFilters, parameters: newParameters } = req.body;
